@@ -23,7 +23,6 @@ public class CSVController
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 string[] splittedLine = line.Split(';');
-                if(splittedLine[0].Equals("Infinitiv")) continue;
                 Verb newVerb = new Verb(splittedLine);
                 verbList.Add(newVerb);
             }
