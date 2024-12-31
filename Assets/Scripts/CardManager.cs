@@ -1,12 +1,11 @@
 
-using System;
-using System.Collections;
+
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-public class CardManager : MonoBehaviour
+public class CardManager : MonoBehaviour, IDragHandler, IEndDragHandler, IPointerClickHandler
 {
     private CSVController cSVController;
     private List<Verb> verbList;
@@ -25,7 +24,9 @@ public class CardManager : MonoBehaviour
     private int flipCounter;
     private Quaternion targetRotation;
     private bool enableSlide;
-    private GameObject oldcanvas;
+    private GameObject oldCanvas;
+    private Renderer oldCanvasRenderer;
+    private Vector3 targetDirection;
 
     void Awake() {
         cSVController = new CSVController();
@@ -44,14 +45,28 @@ public class CardManager : MonoBehaviour
     }
 
 
-    void Update() {
-        if(Input.GetKeyDown(KeyCode.Return) && !enableSlide)
-            SetNextCard();
-        if(Input.GetKeyDown(KeyCode.Space) && !enableFlip)
-            FlipCard();
-        
+    void Update() {                    
         if(enableFlip) FlipCardAnimation();
         if(enableSlide) SlideCardAnimation();
+    }
+    public void OnDrag(PointerEventData eventData)
+    {
+        //Required to call OnEndDrag
+        //TODO: Move a little bit the card in the direction of the drag
+    }
+    public void OnEndDrag(PointerEventData eventData){
+        if(enableFlip || enableSlide) return;
+        targetDirection = (eventData.position - eventData.pressPosition).normalized;
+        SetNextCard();
+    }
+
+    public void OnPointerClick(PointerEventData eventData){
+        if(enableFlip || enableSlide) return;
+        FlipCard();
+    }
+
+    public void ReciveEvent(){
+        //Target for the events
     }
 
 
@@ -107,8 +122,9 @@ public class CardManager : MonoBehaviour
 
 /// NEXT CARD
     private void SetNextCard(){
-        oldcanvas = Instantiate(gameObject);
-        Destroy(oldcanvas.GetComponent<CardManager>());
+        oldCanvas = Instantiate(gameObject);
+        oldCanvasRenderer = oldCanvas.GetComponent<Renderer>();
+        Destroy(oldCanvas.GetComponent<CardManager>());
         enableSlide = true;
 
         GetNextIndex();
@@ -117,19 +133,17 @@ public class CardManager : MonoBehaviour
         word.text = verbList[cardIndex].infiniv;
         topicToGuess.text = verbList[0].translation + "?";
     }
-
     private void GetNextIndex(){
         cardIndex++;
         if (cardIndex == 0) cardIndex = 1;
         if (cardIndex >= verbList.Count) cardIndex = 1;
     }
-
     private void SlideCardAnimation(){
-        Vector3 targetPosition = new Vector3(16,0,0);
-        oldcanvas.transform.position =  Vector3.MoveTowards(oldcanvas.transform.position, targetPosition , slideSpeed * Time.deltaTime);
 
-        if(oldcanvas.transform.position == targetPosition){
-            Destroy(oldcanvas);
+        oldCanvas.transform.position +=  targetDirection * slideSpeed * Time.deltaTime; //Vector3.MoveTowards(oldcanvas.transform.position, targetPosition , slideSpeed * Time.deltaTime);
+
+        if(oldCanvas.transform.position.magnitude > 0.25 && !oldCanvasRenderer.isVisible){
+            Destroy(oldCanvas);
             enableSlide = false;
         }
     }
